@@ -1,0 +1,183 @@
+package com.example.opqr.overall_situation;
+
+import android.util.Log;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.HashMap;
+
+public class UseDao {
+
+    private static final String TAG = "mysql-testapp-UserDao";
+
+    /**
+     * function: 登录
+     * */
+    public int login(String userAccount, String userPassword){
+        System.out.println('k');
+        HashMap<String, Object> map = new HashMap<>();
+        // 根据数据库名称，建立连接
+        Connection connection = JDBCUtils.getConn();
+        int msg = 0;
+        try {
+            // mysql简单的查询语句。这里是根据user表的userAccount字段来查询某条记录
+            String sql = "select * from app where user_id = ?";
+            if (connection != null){// connection不为null表示与数据库建立了连接
+                PreparedStatement ps = connection.prepareStatement(sql);
+                if (ps != null){
+                    Log.e(TAG,"账号：" + userAccount);
+                    //根据账号进行查询
+                    ps.setString(1, userAccount);
+                    // 执行sql查询语句并返回结果集
+                    ResultSet rs = ps.executeQuery();
+                    int count = rs.getMetaData().getColumnCount();
+                    //将查到的内容储存在map里
+                    while (rs.next()){
+                        // 注意：下标是从1开始的
+                        for (int i = 1;i <= count;i++){
+                            String field = rs.getMetaData().getColumnName(i);
+                            map.put(field, rs.getString(field));
+                        }
+                    }
+                    connection.close();
+                    ps.close();
+
+                    if (map.size()!=0){
+
+                        StringBuilder s = new StringBuilder();
+                        //寻找密码是否匹配
+                        for (String key : map.keySet()){
+                            if(key.equals("password")){
+                                if(userPassword.equals(map.get(key))){
+                                    msg = 1;            //密码正确
+                                }
+                                else
+                                    msg = 2;            //密码错误
+                                break;
+                            }
+                        }
+                    }else {
+                        Log.e(TAG, "查询结果为空");
+                        msg = 3;
+                    }
+                }else {
+                    msg = 0;
+                }
+            }else {
+                msg = 0;
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            Log.d(TAG, "异常login：" + e.getMessage());
+            msg = 0;
+        }
+        return msg;
+    }
+
+    /**
+     * function: 注册
+     * */
+    public boolean register(User user){
+        HashMap<String, Object> map = new HashMap<>();
+        // 根据数据库名称，建立连接
+        Connection connection = JDBCUtils.getConn();
+
+        try {
+            String sql = "insert into app(user_id,password,person_id) values (?,?,?)";
+            if (connection != null){// connection不为null表示与数据库建立了连接
+                PreparedStatement ps = connection.prepareStatement(sql);
+                if (ps != null){
+                    //将数据插入数据库
+                    ps.setString(1,user.getUserAccount());
+                    ps.setString(2,user.getUserPassword());
+                    ps.setString(3,user.getId());
+                    // 执行sql查询语句并返回结果集
+                    int rs = ps.executeUpdate();
+                    if(rs>0)
+                        return true;
+                    else
+                        return false;
+                }else {
+                    return  false;
+                }
+            }else {
+                return  false;
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            Log.e(TAG, "异常register：" + e.getMessage());
+            return false;
+        }
+
+    }
+    /**
+     * function: 根据账号进行查找该用户是否存在
+     * */
+    public User findUser(String userAccount) {
+
+        // 根据数据库名称，建立连接
+        Connection connection = JDBCUtils.getConn();
+        User user = null;
+        try {
+            String sql = "select * from app where user_id = ?";
+            if (connection != null){// connection不为null表示与数据库建立了连接
+                PreparedStatement ps = connection.prepareStatement(sql);
+                if (ps != null) {
+                    ps.setString(1, userAccount);
+                    ResultSet rs = ps.executeQuery();
+                    while (rs.next()) {
+                        //注意：下标是从1开始
+                        String userAccount1 = rs.getString(1);
+                        String userPassword = rs.getString(2);
+                        String id = rs.getString(3);
+                       // user = new User(id, userAccount1, userPassword);
+                        return user;
+                    }
+                }
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            Log.d(TAG, "异常findUser：" + e.getMessage());
+            return null;
+        }
+        return user;
+    }
+
+    public int updateUserData(String id,String new_password) {
+        //获取链接数据库对象
+        Connection connection = JDBCUtils.getConn();
+        if(connection!=null)
+        {
+            if (findUser(id)!=null) {
+                //获取链接数据库对象
+                //MySQL 语句= '123856' where user_id = '18098684562
+                try {   String sql = "update app  set password = ? where user_id = ?";
+                    PreparedStatement ps = connection.prepareStatement(sql);
+                    {
+                        ps = connection.prepareStatement(sql);
+                        Log.e( id+new_password,"" );
+                        ps.setString(2, id);//第一个参数status 一定要和上面SQL语句字段顺序一致
+                        ps.setString(1, new_password);//第二个参数name 一定要和上面SQL语句字段顺序一致
+                        int i=  ps.executeUpdate();//返回1 执行成功
+                        Log.e( "updateUserData: "+i,"" );
+                        return 1;
+                    }
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+            else
+            {
+                return -2;
+            }
+        }
+        else
+        {
+            return -1;
+        }
+        return 0;
+    }
+
+}
